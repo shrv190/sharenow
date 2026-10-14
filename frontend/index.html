@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShareNow — Real-Time File, Image & Text Sharing</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-40 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Logo & Room Pill -->
+      <div class="flex items-center space-x-3">
+        <a href="/" class="flex items-center space-x-2.5 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+          </div>
+          <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">ShareNow</span>
+        </a>
+
+        <!-- Room Switcher Button -->
+        <button id="roomBtn" class="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700/80 text-xs font-medium text-slate-300 border border-slate-700/60 transition">
+          <i data-lucide="hash" class="w-3.5 h-3.5 text-brand-400"></i>
+          <span id="currentRoomLabel">global</span>
+          <span id="roomLockIcon" class="hidden text-amber-400"><i data-lucide="lock" class="w-3 h-3"></i></span>
+        </button>
+      </div>
+
+      <!-- Live Storage Meter -->
+      <div class="flex items-center space-x-2 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50 text-xs">
+        <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-slate-400"></i>
+        <div class="w-20 sm:w-28 bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div id="storageBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <span id="storageLabel" class="text-slate-300 font-mono">0 / 500 MB</span>
+      </div>
+
+      <!-- Action Utilities -->
+      <div class="flex items-center space-x-2">
+        <!-- Online Peers Counter -->
+        <div id="peersBadge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="peersCount">1 online</span>
+        </div>
+
+        <!-- QR Code Mobile Pair Button -->
+        <button id="qrModalBtn" title="Connect Mobile Phone via QR Code" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Sound Toggle Button -->
+        <button id="soundToggleBtn" title="Toggle Notification Chime" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition">
+          <i data-lucide="volume-2" id="soundIcon" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Dark/Light Theme Toggle -->
+        <button id="themeToggleBtn" title="Toggle Theme" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition">
+          <i data-lucide="sun" id="themeIcon" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full flex flex-col gap-6">
+
+    <!-- Unified Share Composer Card -->
+    <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-sm relative overflow-hidden">
+      <!-- Glow ambient background -->
+      <div class="absolute -top-10 -right-10 w-44 h-44 bg-brand-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Message Textarea -->
+      <div class="relative">
+        <textarea
+          id="messageInput"
+          rows="2"
+          placeholder="Share a message, paste a link, or press Ctrl+V anywhere to paste screenshots/files..."
+          class="w-full bg-slate-950/60 border border-slate-700/80 rounded-xl p-3.5 text-sm sm:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Drag & Drop Zone Area -->
+      <div id="dropZone" class="mt-3 border-2 border-dashed border-slate-700/80 hover:border-brand-500/80 rounded-xl p-4 text-center cursor-pointer transition-all bg-slate-950/30 hover:bg-slate-900/50 flex flex-col items-center justify-center gap-1.5 group">
+        <div class="w-9 h-9 rounded-full bg-slate-800 group-hover:bg-brand-600/20 text-brand-400 flex items-center justify-center transition">
+          <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-300 font-medium">
+          Drop files or photos here, or <span class="text-brand-400 underline decoration-brand-500/40">browse files</span>
+        </p>
+        <p class="text-[11px] text-slate-500">Supports images, documents, archives, videos (Auto-deleted after 1 hour)</p>
+        <input type="file" id="fileInput" class="hidden" multiple />
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
+      </div>
+
+      <!-- Upload Progress Indicator -->
+      <div id="uploadProgressContainer" class="hidden mt-3">
+        <div class="flex justify-between text-xs text-slate-400 mb-1">
+          <span id="uploadStatusText">Uploading file...</span>
+          <span id="uploadPercentText">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="uploadProgressBar" class="bg-brand-500 h-1.5 rounded-full transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-800/80">
+        
+        <!-- Left Options (Burn & Camera) -->
+        <div class="flex items-center space-x-3 text-xs">
+          <!-- Burn After Reading Checkbox -->
+          <label class="flex items-center space-x-1.5 cursor-pointer text-slate-400 hover:text-slate-200 select-none" title="Item will self-destruct immediately after first download">
+            <input type="checkbox" id="burnCheck" class="rounded bg-slate-800 border-slate-700 text-brand-600 focus:ring-0 w-3.5 h-3.5" />
+            <span class="flex items-center gap-1">
+              <span class="text-amber-500">🔥</span> Burn after 1 download
+            </span>
+          </label>
+
+          <!-- Snap Camera (Mobile Quick Action) -->
+          <button id="snapCameraBtn" type="button" class="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition" title="Capture photo with camera">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-brand-400"></i>
+            <span>Camera</span>
+          </button>
+        </div>
+
+        <!-- Right: Send Button -->
+        <button
+          id="sendBtn"
+          type="button"
+          class="flex items-center space-x-2 px-5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-medium text-xs sm:text-sm shadow-md shadow-brand-500/20 active:scale-95 transition"
+        >
+          <span>Share Note</span>
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- Feed Controls: Filters & Search -->
+    <section class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <!-- Filter Tabs -->
+      <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs font-medium self-start sm:self-auto overflow-x-auto">
+        <button data-filter="all" class="filter-tab active px-3 py-1.5 rounded-lg bg-brand-600 text-white transition">All Items</button>
+        <button data-filter="image" class="filter-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">Images</button>
+        <button data-filter="file" class="filter-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">Files</button>
+        <button data-filter="text" class="filter-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">Notes</button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative flex-1 max-w-xs">
+        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search items..."
+          class="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 transition"
+        />
+      </div>
+    </section>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center text-slate-500">
+      <div class="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-600 mb-3 border border-slate-800">
+        <i data-lucide="inbox" class="w-8 h-8"></i>
+      </div>
+      <h3 class="text-slate-300 font-semibold text-base mb-1">No shared items yet</h3>
+      <p class="text-xs max-w-sm">Drop a file, paste an image screenshot with Ctrl+V, or send a text note to start sharing across devices!</p>
+    </div>
+
+    <!-- Items Grid Feed -->
+    <section id="itemsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
+      <!-- Item cards rendered dynamically via app.js -->
+    </section>
+
+  </main>
+
+  <!-- Mobile QR Code Modal -->
+  <div id="qrModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl relative">
+      <button id="closeQrModal" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <div class="w-12 h-12 rounded-xl bg-brand-600/20 text-brand-400 flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="smartphone" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white mb-1">Connect Mobile Phone</h3>
+      <p class="text-xs text-slate-400 mb-4">Scan with your phone's camera on the same Wi-Fi network to start sharing instantly.</p>
+      
+      <!-- QR Code Canvas Container -->
+      <div class="bg-white p-4 rounded-xl inline-block shadow-inner mb-4" id="qrcodeContainer"></div>
+
+      <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs font-mono text-slate-300 break-all select-all mb-4" id="qrUrlLabel">
+        http://...
+      </div>
+
+      <button id="copyQrLinkBtn" class="w-full py-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+        <span>Copy Link</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Room Switcher & PIN Modal -->
+  <div id="roomModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+      <button id="closeRoomModal" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <h3 class="text-lg font-bold text-white mb-1">Switch or Lock Room</h3>
+      <p class="text-xs text-slate-400 mb-4">Use rooms for private sharing or add a PIN for public Wi-Fi security.</p>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-slate-300 block mb-1">Room Name</label>
+          <input type="text" id="modalRoomInput" placeholder="e.g. team-share" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-300 block mb-1">Room PIN (Optional)</label>
+          <input type="password" id="modalPinInput" placeholder="4+ digits to protect or unlock" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500" />
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 mt-5">
+        <button id="saveRoomBtn" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition">
+          Join Room
+        </button>
+        <button id="setPinBtn" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition" title="Lock room with this PIN">
+          Lock Room
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div id="lightboxModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade">
+    <button id="closeLightbox" class="absolute top-4 right-4 text-slate-300 hover:text-white p-2 rounded-full bg-slate-800/80">
+      <i data-lucide="x" class="w-6 h-6"></i>
+    </button>
+    <div class="max-w-4xl max-h-[85vh] flex flex-col items-center">
+      <img id="lightboxImg" src="" alt="Preview" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl" />
+      <div class="mt-3 flex items-center space-x-3">
+        <a id="lightboxDownloadBtn" href="" download class="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium flex items-center space-x-1.5">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Download Original</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Fullscreen Drop Overlay (Visual indication when dragging files over page) -->
+  <div id="dragOverlay" class="hidden fixed inset-0 z-50 bg-brand-900/60 backdrop-blur-sm border-4 border-dashed border-brand-400 flex flex-col items-center justify-center pointer-events-none">
+    <div class="bg-slate-900 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-3">
+      <i data-lucide="upload-cloud" class="w-12 h-12 text-brand-400 animate-bounce"></i>
+      <h2 class="text-xl font-bold text-white">Drop files or images anywhere to share!</h2>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
